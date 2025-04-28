@@ -1,0 +1,63 @@
+# Limited set of checks that make sense for C
+
+Checks: >
+  -*,
+  clang-analyzer-*,
+  misc-*,
+  readability-*,
+  performance-*,
+  portability-*,
+  bugprone-*,
+  cert-*
+
+# Turn all the warnings from the checks above into errors.
+WarningsAsErrors: ''
+
+HeaderFilterRegex: '^.*\.h$'
+
+# Google Style patterns. Based on https://gist.github.com/airglow923/1fa3bda42f2b193920d7f46ee8345e04
+CheckOptions:
+  # - key:             readability-identifier-naming.EnumCase
+  #   value:           CamelCase
+  # - key:             readability-identifier-naming.EnumConstantCase
+  #   value:           CamelCase
+  # - key:             readability-identifier-naming.EnumConstantPrefix
+  #   value:           k
+  - key:             readability-identifier-naming.FunctionCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.GlobalConstantCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.GlobalConstantPrefix
+    value:           k
+  - key:             readability-identifier-naming.StaticConstantCase
+    value:           CamelCase
+  - key:             readability-identifier-naming.StaticConstantPrefix
+    value:           k
+  - key:             readability-identifier-naming.StaticVariableCase   # original: lower_case
+    value:           camelBack
+  - key:             readability-identifier-naming.MacroDefinitionCase
+    value:           UPPER_CASE
+  - key:             readability-identifier-naming.MacroDefinitionIgnoredRegexp
+    value:           '^[A-Z]+(_[A-Z]+)*_$'
+  - key:             readability-identifier-naming.MemberCase           # original: lower_case
+    value:           camelBack
+  # - key:             readability-identifier-naming.MemberPrefix         # Added
+  #   value:           'm_'
+  #- key:             readability-identifier-naming.PrivateMemberSuffix # Disabled
+  #  value:           _
+  - key:             readability-identifier-naming.PublicMemberSuffix
+    value:           ''
+  - key:             readability-identifier-naming.ParameterCase         # original: lower_case
+    value:           camelBack
+  - key:             readability-identifier-naming.TypeAliasCase
+    value:           CamelCase
+  # - key:             readability-identifier-naming.TypedefCase
+  #   value:           CamelCase
+  - key:             readability-identifier-naming.VariableCase          # original: lower_case
+    value:           camelBack
+  - key:             readability-identifier-naming.IgnoreMainLikeFunctions
+    value:           1
+  - key:             readability-identifier-length.IgnoredVariableNames
+    value:           '[_|j|cb|dm|it|lk]'
+  - key:             readability-identifier-length.IgnoredParameterNames
+    value:           '[j|cb|dt|ts|u|q]'
