@@ -15,15 +15,15 @@ int AsyncTaskScheduler::addTask(std::function<TaskState(void*)> callback, void* 
                                 std::vector<int> dependencies) {
   std::lock_guard lock(m_TasksMutex);
 
-  Task task;
+  AsyncTask task;
   task.id = m_NextTaskId++;
-  task.callback = callback;
-  task.handler = handler;
-  task.interval = std::chrono::milliseconds(intervalMs);
-  task.delayStart = std::chrono::milliseconds(delayStartMs);
-  task.timeoutLimit = std::chrono::milliseconds(timeoutMs);
-  task.createdAt = std::chrono::steady_clock::now();
-  task.lastRun = task.createdAt;
+  task.m_callback = callback;
+  task.m_handler = handler;
+  task.m_interval = std::chrono::milliseconds(intervalMs);
+  task.m_delayStart = std::chrono::milliseconds(delayStartMs);
+  task.m_timeoutLimit = std::chrono::milliseconds(timeoutMs);
+  task.m_addedAt = std::chrono::steady_clock::now();
+  task.m_lastRun = task.m_addedAt;
   task.priority = priority;
   task.retryCount = retries;
   task.groupId = groupId;
@@ -31,8 +31,8 @@ int AsyncTaskScheduler::addTask(std::function<TaskState(void*)> callback, void* 
 
   m_Tasks.push_back(task);
 
-  if (task.handler == nullptr) {
-    m_Tasks.back().handler = &m_Tasks.back();
+  if (task.m_handler == nullptr) {
+    m_Tasks.back().m_handler = &m_Tasks.back();
     spdlog::info("[{}] Handler auto-assigned to task {}", m_SchedulerName, task.id);
   }
 
@@ -45,8 +45,8 @@ void AsyncTaskScheduler::pauseTask(int taskId) {
   std::lock_guard lock(m_TasksMutex);
   for (auto& task : m_Tasks) {
     if (task.id == taskId) {
-      task.paused = true;
-      task.state = TaskState::Paused;
+      task.m_isRunning = true;
+      task.m_taskState = TaskState::Paused;
       spdlog::info("[{}] Paused Task {}", m_SchedulerName, taskId);
       m_Condition.notify_one();
       return;
@@ -58,8 +58,8 @@ void AsyncTaskScheduler::resumeTask(int taskId) {
   std::lock_guard lock(m_TasksMutex);
   for (auto& task : m_Tasks) {
     if (task.id == taskId) {
-      task.paused = false;
-      task.state = TaskState::Waiting;
+      task.m_isRunning = false;
+      task.m_taskState = TaskState::Waiting;
       spdlog::info("[{}] Resumed Task {}", m_SchedulerName, taskId);
       m_Condition.notify_one();
       return;
@@ -80,22 +80,22 @@ void AsyncTaskScheduler::stop() {
   }
 }
 
-bool AsyncTaskScheduler::dependenciesSatisfied(const Task& task) {
+bool AsyncTaskScheduler::dependenciesSatisfied(const AsyncTask& task) {
   for (int const depId : task.dependencies) {
-    auto it = std::ranges::find_if(m_Tasks, [depId](const Task& t) {
+    auto it = std::ranges::find_if(m_Tasks, [depId](const AsyncTask& t) {
       return t.id == depId;
     });
-    if (it != m_Tasks.end() && it->state != TaskState::Done) {
+    if (it != m_Tasks.end() && it->m_taskState != TaskState::Done) {
       return false;
     }
   }
   return true;
 }
 
-Task* AsyncTaskScheduler::findTaskByHandler(void* handler) {
+AsyncTask* AsyncTaskScheduler::findTaskByHandler(void* handler) {
   std::lock_guard const lock(m_TasksMutex);
   for (auto& task : m_Tasks) {
-    if (task.handler == handler) {
+    if (task.m_handler == handler) {
       return &task;
     }
   }
@@ -111,25 +111,25 @@ void AsyncTaskScheduler::runLoop() {
       std::lock_guard const lock(m_TasksMutex);
 
       if (!m_Tasks.empty()) {
-        std::ranges::sort(m_Tasks, [](const Task& a, const Task& b) {
+        std::ranges::sort(m_Tasks, [](const AsyncTask& a, const AsyncTask& b) {
           return a.priority > b.priority;
         });
 
         for (auto it = m_Tasks.begin(); it != m_Tasks.end();) {
-          if (it->state == TaskState::Done || it->state == TaskState::Failed || it->state == TaskState::Timeout) {
+          if (it->m_taskState == TaskState::Done || it->m_taskState == TaskState::Failed || it->m_taskState == TaskState::Timeout) {
             spdlog::info("[{}] Removing finished Task {}", m_SchedulerName, it->id);
             it = m_Tasks.erase(it);
             continue;
           }
 
-          if (it->paused || !dependenciesSatisfied(*it)) {
+          if (!it->m_isRunning || !dependenciesSatisfied(*it)) {
             ++it;
             continue;
           }
 
-          auto timeSinceCreation = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->createdAt);
-          if (timeSinceCreation < it->delayStart) {
-            auto waitTime = it->delayStart - timeSinceCreation;
+          auto timeSinceCreation = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->m_addedAt);
+          if (timeSinceCreation < it->m_delayStart) {
+            auto waitTime = it->m_delayStart - timeSinceCreation;
             if (waitTime < minSleepTime) {
               minSleepTime = waitTime;
             }
@@ -137,30 +137,30 @@ void AsyncTaskScheduler::runLoop() {
             continue;
           }
 
-          if (it->timeoutLimit.count() > 0 && timeSinceCreation > it->timeoutLimit) {
+          if (it->m_timeoutLimit.count() > 0 && timeSinceCreation > it->m_timeoutLimit) {
             spdlog::error("[{}] Task {} timeout triggered.", m_SchedulerName, it->id);
-            it->state = TaskState::Timeout;
+            it->m_taskState = TaskState::Timeout;
             ++it;
             continue;
           }
 
-          auto timeSinceLastRun = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->lastRun);
-          if (timeSinceLastRun >= it->interval) {
-            it->state = it->callback(it->handler);
-            it->lastRun = now;
+          auto timeSinceLastRun = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->m_lastRun);
+          if (timeSinceLastRun >= it->m_interval) {
+            it->m_taskState = it->m_callback(it->m_handler);
+            it->m_lastRun = now;
 
-            if (it->state == TaskState::Failed && it->currentRetries < it->retryCount) {
+            if (it->m_taskState == TaskState::Failed && it->currentRetries < it->retryCount) {
               it->currentRetries++;
-              it->state = TaskState::Waiting;
+              it->m_taskState = TaskState::Waiting;
               spdlog::warn("[{}] Task {} failed, retrying ({}/{})", m_SchedulerName, it->id, it->currentRetries,
                            it->retryCount);
-            } else if (it->state == TaskState::Failed) {
+            } else if (it->m_taskState == TaskState::Failed) {
               spdlog::error("[{}] Task {} permanently failed.", m_SchedulerName, it->id);
-            } else if (it->state == TaskState::Done) {
+            } else if (it->m_taskState == TaskState::Done) {
               spdlog::info("[{}] Task {} finished successfully.", m_SchedulerName, it->id);
             }
           } else {
-            auto waitTime = it->interval - timeSinceLastRun;
+            auto waitTime = it->m_interval - timeSinceLastRun;
             if (waitTime < minSleepTime) {
               minSleepTime = waitTime;
             }

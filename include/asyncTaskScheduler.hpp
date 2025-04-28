@@ -37,13 +37,13 @@ class AsyncTaskScheduler {
   void start();
   void stop();
 
-  Task* findTaskByHandler(void* handler);
+  AsyncTask* findTaskByHandler(void* handler);
 
  private:
   void runLoop();
-  bool dependenciesSatisfied(const Task& task);
+  bool dependenciesSatisfied(const AsyncTask& task);
 
-  std::vector<Task> m_Tasks;
+  std::vector<AsyncTask> m_Tasks;
   std::mutex m_TasksMutex;
   std::atomic<bool> m_IsRunning;
   std::thread m_SchedulerThread;
