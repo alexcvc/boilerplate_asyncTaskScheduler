@@ -22,41 +22,45 @@
 #
 #  -misc-no-recursion: Allow recursions
 #
-#  -clang-analyzer-cplusplus.NewDelete: Disabled due to false-positive in boost::asio
-#      Aside from that it duplicates functionality provided by the address-sanitizer
-#      https://github.com/boostorg/asio/issues/341#issuecomment-626164787
-#      https://github.com/boostorg/beast/issues/1674
-#      https://stackoverflow.com/questions/62087533/clang-analyzer-potential-memory-leak-false-positive
+#  -modernize-use-trailing-return-type: Does not fit to legacy code surrounding
+#      and reduces readability.
 #
+#  -readability-uppercase-literal-suffix: Superfluous nitpicking.
 
 Checks: >
   *,
   -abseil-*,
   -altera-*,
   -darwin-*,
+  -hicpp-*,
   -llvmlibc-*,
   -mpi-*,
   -objc*,
   -openmp-*,
   -zircon-*,
-  -bugprone-easily-swappable-parameters,
-  -clang-analyzer-cplusplus.NewDelete,
   -fuchsia-default-arguments-calls,
   -fuchsia-default-arguments-declarations,
   -fuchsia-overloaded-operator,
-  -google-runtime-references,
   -misc-no-recursion,
-  -misc-non-private-member-variables-in-classes,
-  -modernize-return-braced-init-list,
   -modernize-use-trailing-return-type,
-  -performance-move-const-arg,
-  -readability-redundant-declaration
+  -readability-uppercase-literal-suffix,
 
 # Turn all the warnings from the checks above into errors.
-# WarningsAsErrors: "*"
+WarningsAsErrors: >
+  modernize-raw-pointer,
+  modernize-use-nullptr,
+  modernize-use-using,
+  cppcoreguidelines-no-malloc,
+  clang-analyzer-cplusplus.NewDelete,
+#  modernize-use-override,
+#  modernize-avoid-bind,
+#  modernize-redundant-void-arg,
+#  modernize-replace-auto-ptr,
+#  cppcoreguidelines-owning-memory,
+#  cppcoreguidelines-pro-type-member-init,
+#  cppcoreguidelines-pro-bounds-array-to-pointer-decay,
 
-HeaderFilterRegex: '^((?!.conan).)*$'
-AnalyzeTemporaryDtors: false
+HeaderFilterRegex: '.*\.h{,h,pp}$'
 
 # Google Style patterns. Based on https://gist.github.com/airglow923/1fa3bda42f2b193920d7f46ee8345e04
 CheckOptions:
@@ -75,7 +79,7 @@ CheckOptions:
   # - key:             readability-identifier-naming.EnumConstantPrefix
   #   value:           k
   - key:             readability-identifier-naming.FunctionCase
-    value:           CamelCase
+    value:           camelBack
   - key:             readability-identifier-naming.GlobalConstantCase
     value:           CamelCase
   - key:             readability-identifier-naming.GlobalConstantPrefix
@@ -91,7 +95,7 @@ CheckOptions:
   - key:             readability-identifier-naming.MacroDefinitionIgnoredRegexp
     value:           '^[A-Z]+(_[A-Z]+)*_$'
   - key:             readability-identifier-naming.MemberCase           # original: lower_case
-    value:           camelBack
+    value:           CamelCase
   - key:             readability-identifier-naming.MemberPrefix         # Added
     value:           'm_'
   #- key:             readability-identifier-naming.PrivateMemberSuffix # Disabled
@@ -114,3 +118,5 @@ CheckOptions:
     value:           '[_|j|cb|dm|it|lk]'
   - key:             readability-identifier-length.IgnoredParameterNames
     value:           '[j|cb|dt|ts|u|q]'
+
+FormatStyle: file
