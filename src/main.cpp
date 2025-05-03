@@ -1,49 +1,100 @@
+#include <any>
+#include <chrono>
+#include <iostream>
+#include <memory>
 #include <thread>
 
-#include <spdlog/spdlog.h>
+#include "scheduler.hpp"
 
-#include "my_c_library.h"
-#include "scheduler.h"
+// Assuming relevant classes/interfaces are in namespace tev
+using namespace tev;
+using namespace std::chrono_literals;
 
-TaskState myTaskFunction(void* handler) {
-  auto* ctx = static_cast<MyCStruct*>(handler);
-  do_work(ctx);
-
-  static int counter = 0;
-  counter++;
-  spdlog::info("Task [{}] running, value = {}", ctx->name, ctx->value);
-
-  if (counter >= 5) {
-    return TaskState::Done;
+// Custom controller implementing IController
+class MyController : public IController {
+ public:
+  void handleEvent() {
+    std::cout << "Event handled.\n";
   }
-  return TaskState::Running;
-}
+  void stopEvent() {
+    std::cout << "Event stopped.\n";
+  }
+  void abortEvent() {
+    std::cout << "Event aborted.\n";
+  }
+};
+
+// Custom user data implementing IUserData
+class MyUserData : public IUserData {
+ public:
+  [[nodiscard]] uint32_t getEventType() const {
+    return 1;  // Sample event type
+  }
+  [[nodiscard]] std::any getUserParameter() const {
+    return std::string("Sample parameter");
+  }
+};
 
 int main() {
-  auto counter{10};
-  std::string taskName;
-  spdlog::set_level(spdlog::level::debug);
+  // Instantiate scheduler
+  Scheduler scheduler;
 
-  Scheduler scheduler("MainScheduler");
-  scheduler.start();
+  // Create controller and user data instances
+  auto controller = std::make_shared<MyController>();
+  auto userData = std::make_shared<MyUserData>();
 
-  MyCStruct ctx;
-  ctx.value = 0;
-  taskName = "Task_" + std::to_string(counter);
-  strcpy(ctx.name, taskName.c_str());
+  // Configure event callbacks
+  EventConfig config{2000ms,  // delayMs
+                     1000ms,  // serveMs
+                     8000ms,  // lifeMs
+                     // startCallback
+                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
+                       std::cout << "*** Event started\n";
+                       return 1000ms;
+                     },
+                     // eventCallback
+                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
+                       std::cout << "*** Event running\n";
+                       return 1000ms;
+                     },
+                     // abortCallback
+                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
+                       std::cout << "*** Event aborted\n";
+                       return 0ms;
+                     },
+                     // completeCallback
+                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
+                       std::cout << "*** Event completed\n";
+                       return 0ms;
+                     },
+                     // timeoutCallback
+                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
+                       std::cout << "*** Event timed out\n";
+                       return 0ms;
+                     }};
 
-  scheduler.addTask(myTaskFunction, &ctx, 500, 0, 10000, 5, 1);
+  // Push event to scheduler
+  auto event = scheduler.pushEvent(controller, userData, config);
 
-  while (--counter > 0) {
-    std::shared_ptr<MyCStruct> ctxPtr = std::make_shared<MyCStruct>();
-    ctxPtr->value = 10 * counter;
-    taskName = "Task_" + std::to_string(counter);
-    strcpy(ctxPtr->name, taskName.c_str());
-    scheduler.addTask(myTaskFunction, ctxPtr.get(), 500, 0, 10000, 5, 1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  // Start scheduler (usually runs in its own thread)
+  if (!scheduler.start()) {
+    std::cerr << "Failed to start scheduler\n";
+    return 1;
   }
 
-  scheduler.stop();
+  // Simulate servicing events for a while
+  for (int i = 0; i < 100; i++) {
+    auto timeout = 5000ms;
+    auto sooner = scheduler.service();
+    if (timeout > sooner) {
+      timeout = sooner;
+    }
+    std::cout << ">>> Next event in: " << timeout.count() << " ms\n";
+    std::this_thread::sleep_for(timeout);
+  }
 
-  spdlog::info("Main finished.");
+  // Terminate scheduler after done
+  scheduler.terminate();
+
+  return 0;
 }

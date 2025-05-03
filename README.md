@@ -1,15 +1,17 @@
-C++ Dynamic Asynchronous Task Scheduler with C Integration
----
+# C++20 Real-Time Dynamic Event Scheduler
 
-This project implements a **real-time dynamic asynchronous task scheduler** in modern C++20, fully integrated with C libraries via `void*` handlers.
+This project delivers a modern, extensible **asynchronous event scheduler** in C++20, designed for real-time systems and
+seamless C/C++ interoperability.
 
-* Scheduler (dynamic, real-time, priority-based)  
-* C Library Integration (pure C `void*` handler)  
-* Catch2 Unit Tests (header-only)  
-* Visual Studio Code Ready  
-* CLion Ready  
-* Docker Ready  
-* GitHub Actions CI/CD Ready
+- Dynamic event scheduling and management at runtime
+- C and C++ integration via `void*` handlers and interfaces
+- interval, and delayed event execution
+- Comprehensive state machine for event lifecycle
+- Automatic timeout, retry
+- Multiple independent scheduler instances
+- Fast event lookup and management
+- Extensive unit tests with Catch2
+- Ready for CLion, VSCode, Docker, and CI/CD pipelines
 
 ---
 
@@ -17,25 +19,20 @@ This project implements a **real-time dynamic asynchronous task scheduler** in m
 
 ### Scheduler Core
 
-- Dynamic task add/remove at runtime
-- Task handler (`void*`) mandatory — C compatible
-- Priority-based scheduling
-- Interval-based execution (e.g., every X ms)
-- Delayed task start
-- Automatic timeout detection
-- State machine per task:
-  - `Ready`, `Waiting`, `Running`, `Done`, `Failed`, `Timeout`, `Paused`
-- Retry failed tasks N times automatically
-- Pause and resume tasks dynamically
-- Task dependency management (run after another task finishes)
-- Efficient event-driven loop (`std::condition_variable`)
-- Multiple independent Scheduler instances
-- Fast task lookup by handler
+- Add/remove events dynamically at runtime
+- C/C++ compatible event handlers (`void*` and interfaces)
+- Priority, interval, and delayed event execution
+- State machine per event:
+    - `Ready`, `Waiting`, `Running`, `Done`, `Failed`, `Timeout`, `Paused`
+- Automatic timeout, retry, and dependency management
+- Pause/resume and abort events dynamically
+- Multiple independent scheduler instances
+- Fast event lookup and management
 
 ### IDE and Tools Support
 
-- **Visual Studio Code**: Build, debug, IntelliSense ready
 - **CLion**: Fully supported
+- **Visual Studio Code**: Build, debug, IntelliSense ready
 - **Docker**: Build and run in container
 - **GitHub Actions CI**: Automatic build, test, validate
 
@@ -47,16 +44,13 @@ This project implements a **real-time dynamic asynchronous task scheduler** in m
 /ProjectRoot
  ├── CMakeLists.txt           # CMake build script
  ├── Dockerfile               # Build project in Docker
- ├── README.md                 # This documentation
- ├── scheduler/                # Task scheduler source (C++)
- ├── c_library/                # C library code (C)
- ├── src/                      # Main application
- ├── tests/                    # Catch2 unit tests
- └── .vscode/                  # VSCode config for CMake Tools
-    └── settings.json, launch.json, c_cpp_properties.json
+ ├── README.md                # This documentation
+ ├── include/                 # C++ event scheduler headers
+ ├── src/                     # Main application
+ ├── test/                    # Catch2 unit tests
  └── .github/
     └── workflows/
-        └── ci.yml             # GitHub Actions CI/CD pipeline
+        └── ci.yml            # GitHub Actions CI/CD pipeline
 ```
 
 ---
@@ -90,38 +84,44 @@ docker build -t scheduler_project .
 docker run --rm scheduler_project
 ```
 
-### VSCode Usage
+### CLion & VSCode Usage
 
-1. Install extensions:
-   - CMake Tools
-   - C++ Extension (ms-vscode.cpptools)
-2. Open Folder.
-3. Press "CMake: Build" ➔ Press F5 to run/debug.
+- Open the project folder in your IDE.
+- Configure CMake profile if needed.
+- Build and run/debug as usual.
 
 ---
 
-## How to Create and Run a Task
+## How to Create and Run an Event
 
-### 1. Write a Task Function
+### 1. Implement Controller and User Data
 
 ```cpp
-TaskState myTaskFunction(void* handler) {
-    MyCStruct* ctx = static_cast<MyCStruct*>(handler);
-    ctx->value++;
-    return (ctx->value >= 5) ? TaskState::Done : TaskState::Running;
-}
+class MyController : public IController {
+  void handleEvent() override { /* ... */ }
+  void stopEvent() override { /* ... */ }
+  void abortEvent() override { /* ... */ }
+};
+
+class MyUserData : public IUserData {
+  uint32_t getEventType() const override { return 1; }
+  std::any getUserParameter() const override { return std::string("param"); }
+};
 ```
 
-### 2. Add a Task to Scheduler
+### 2. Add an Event to Scheduler
 
 ```cpp
-Scheduler scheduler("MainScheduler");
+Scheduler scheduler;
+auto controller = std::make_shared<MyController>();
+auto userData = std::make_shared<MyUserData>();
+
+EventConfig config{/* delay, serve, life, callbacks... */};
+auto event = scheduler.pushEvent(controller, userData, config);
+
 scheduler.start();
-
-MyCStruct ctx = {42, "TaskA"};
-scheduler.addTask(myTaskFunction, &ctx, 500, 0, 5000, 5, 1);
-
-scheduler.stop();
+scheduler.service();
+scheduler.terminate();
 ```
 
 ---
@@ -129,19 +129,18 @@ scheduler.stop();
 ## Dependencies
 
 - CMake ≥ 3.15
-- C++17 compiler
+- C++20 compiler
 - spdlog (for logging)
-
-(Install with `sudo apt install libspdlog-dev` or vcpkg.)
+- Catch2 (for unit testing)
 
 ---
 
 ## GitHub Actions (CI/CD)
 
-- Every Push / Pull Request:
-  - Auto Build via CMake
-  - Auto Run Unit Tests (Catch2)
-  - Validate before merge
+- Every push/pull request:
+    - Auto build via CMake
+    - Auto run unit tests (Catch2)
+    - Validate before merge
 
 Workflow file: `.github/workflows/ci.yml`
 
@@ -149,17 +148,17 @@ Workflow file: `.github/workflows/ci.yml`
 
 ## Future Upgrades
 
-- Code Coverage reporting
-- Auto Retry with backoff
-- Task progress reporting (percent complete)
-- Event queue for task communications
-- Group task execution pipelines
+- Code coverage reporting
+- Auto retry with backoff
+- Event progress reporting
+- Event queue for inter-event communication
+- Group event execution pipelines
 - Full documentation website
 
 ---
 
 ## Authors
 
-Alexander Sacharov and 
+Alexander Sacharov and contributors
 
 ---

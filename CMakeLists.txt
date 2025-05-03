@@ -64,8 +64,6 @@ add_compile_options(
 #######################################################
 ### Add subdirectories
 #######################################################
-### library C++ support library
-add_subdirectory(lib)
 
 ### application.
 add_subdirectory(src)

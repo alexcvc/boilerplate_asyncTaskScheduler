@@ -17,11 +17,14 @@ foreach (SOURCE_PATH ${SOURCE_FILES})
 
   # Add test target
   add_executable(${TargetName} ${SOURCE_PATH}
-     ../include/asyncTask.hpp)
+     ${CMAKE_SOURCE_DIR}/include/iController.hpp
+     ${CMAKE_SOURCE_DIR}/include/iUserData.hpp
+     ${CMAKE_SOURCE_DIR}/include/event.hpp
+     ${CMAKE_SOURCE_DIR}/include/scheduler.hpp
+  )
 
   # add compiler definition
-  target_include_directories(${TargetName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib)
-  target_include_directories(${TargetName} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include)
+  target_include_directories(${TargetName} PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
   ## link with library
   #  target_link_libraries(${TargetName} gtest gtest_main)

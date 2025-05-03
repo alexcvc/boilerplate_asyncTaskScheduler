@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 ### Set project name
-set(TargetName asyncTaskScheduler)
+set(TargetName eventScheduler)
 
 # Set the PROJECT_NAME, PROJECT_VERSION as well as other variable
 project(${TargetName}
