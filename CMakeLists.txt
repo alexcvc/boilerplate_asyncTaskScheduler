@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 3.5)
 
 # Set the PROJECT_NAME, PROJECT_VERSION as well as other variable
 project(boilerplate_asyncTaskScheduler
-   VERSION 1.0.0
-   DESCRIPTION "C++ asynchronous task scheduler boilerplate"
+   VERSION 1.1.0
+   DESCRIPTION "C++ event scheduler boilerplate"
    LANGUAGES CXX C
 )
 
 ### set readable summary for this version
-set(PROJECT_VERSION_DESCRIPTION "Asynchronous task scheduler Test and probes")
+set(PROJECT_VERSION_DESCRIPTION "Event scheduler test and probes")
 
 ### Options
 option(BUILD_TEST "Build test-applications" ON)
