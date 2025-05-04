@@ -45,9 +45,13 @@ bool Scheduler::start() {
     });
 
     while (true) {
-      DurationUnit waitTime = service();
-      std::unique_lock lock(m_CondMutex);
-      m_CondEvent.wait_for(lock, waitTime);
+      // serve events
+      DurationUnit waitTime = processEvents(m_MaxInterval);
+      // wait next serve
+      {
+        std::unique_lock lock(m_CondMutex);
+        m_CondEvent.wait_for(lock, waitTime);
+      }
       //Stop if requested to stop
       if (stop_token.stop_requested()) {
         break;
@@ -82,7 +86,7 @@ void Scheduler::pushEvent(std::shared_ptr<Event> event) {
   // add event to the list
   m_scheduledEvents.push_back(event);
   // notify the scheduler thread
-  m_CondEvent.notify_one();
+  wakeUp();
 }
 
 std::shared_ptr<Event> Scheduler::pushEvent(std::shared_ptr<IController> controller,
@@ -119,8 +123,7 @@ void Scheduler::eraseEvent(std::shared_ptr<IUserData> userData) {
  * @brief Service function to process timed events.
  * @return Minimum delay for the next event.
  */
-std::chrono::milliseconds Scheduler::service() {
-  std::chrono::milliseconds nMinDelay = m_scheduledEvents.empty() ? m_MaxDelayIntervalMs : 1000ms;
+std::chrono::milliseconds Scheduler::processEvents(std::chrono::milliseconds processingTime) {
   // invoke start function
   [[maybe_unused]] auto invokeStartFunction = [this](const std::shared_ptr<Event>& it) {
     if (it->getStartFunc()) {
@@ -155,64 +158,52 @@ std::chrono::milliseconds Scheduler::service() {
   const std::lock_guard lg(m_Mutex);
 
   for (auto it = m_scheduledEvents.begin(); !m_scheduledEvents.empty() && it != m_scheduledEvents.end();) {
-    std::cout << ">> event check --------------------" << std::endl;
     auto event = *it;
     switch (event->getStatus()) {
       case Event::Status::Pending:
-        std::cout << "pending" << std::endl;
-        if (event->getStartDelay() != std::chrono::milliseconds::min()) {
+        if (event->getStartDelay() > std::chrono::milliseconds::min()) {
           if (!event->getEventClock().IsRunning()) {
             // Start the event clock to delay the event
-            std::cout << "start delay" << std::endl;
             event->getEventClock().Start(event->getStartDelay());
             break;
           }
           if (event->getEventClock().IsElapsed()) {
             // start
-            std::cout << "start" << std::endl;
-            event->getEventClock().SetTimeout(event->getServeInterval());
-            event->setStatus(Event::Status::Running);
             invokeStartFunction(event);
+            event->setStatus(Event::Status::Running);
+            event->getEventClock().Start(event->getServeInterval());
             break;
           }
         } else {
           // start immediately
-          std::cout << "start immediately" << std::endl;
-          event->getEventClock().SetTimeout(event->getServeInterval());
-          event->setStatus(Event::Status::Running);
           invokeStartFunction(event);
+          event->setStatus(Event::Status::Running);
+          event->getEventClock().Start(event->getServeInterval());
         }
         break;
       case Event::Status::Running:
-        std::cout << "running" << std::endl;
         if (!event->getEventClock().IsRunning()) {
           // start timer
-          std::cout << "start timer" << std::endl;
           event->getEventClock().Start(event->getServeInterval());
           invokeStartFunction(event);
         } else if (event->getEventClock().IsElapsed().value()) {
-          std::cout << "elapsed" << std::endl;
-          event->getEventClock().SetTimeout(event->getServeInterval());
           invokeEventFunction(event);
+          event->getEventClock().Start(event->getServeInterval());
         }
         break;
       case Event::Status::Completed:
-        std::cout << "completed" << std::endl;
         invokeCompleteFunction(event);
         it = m_scheduledEvents.erase(it);
         continue;
       case Event::Status::Aborted:
-        std::cout << "aborted" << std::endl;
         invokeAbortFunction(event);
         it = m_scheduledEvents.erase(it);
         continue;
       case Event::Status::Timeouted:
-        std::cout << "timeouted" << std::endl;
         invokeTimeoutFunction(event);
         it = m_scheduledEvents.erase(it);
         continue;
       default:
-        std::cout << "default" << std::endl;
         it = m_scheduledEvents.erase(it);
         continue;
     }
@@ -237,13 +228,17 @@ std::chrono::milliseconds Scheduler::service() {
       }
     }
 
-    if (remainingTimeMs < nMinDelay.count()) {
-      nMinDelay = std::chrono::milliseconds(remainingTimeMs);
+    if (remainingTimeMs < processingTime.count()) {
+      processingTime = std::chrono::milliseconds(remainingTimeMs);
     }
 
-    // next
-    it++;
+    ++it;
   }
-  return nMinDelay;
+  // Ensure wait time is at least minInterval
+  if (processingTime.count() <= 0)
+    processingTime = 1ms;
+
+  return processingTime;
 }
+
 }  // namespace tev

@@ -44,14 +44,14 @@ using namespace std::chrono_literals;
  */
 class Scheduler {
  public:
-  static constexpr DurationUnit kMaxDelayIntervalMs{10000ms};
+  static constexpr DurationUnit kMaxDelayIntervalMs{5000ms};
 
   Scheduler() = default;
   virtual ~Scheduler() = default;
   Scheduler(const Scheduler&) = delete;
   Scheduler& operator=(const Scheduler&) = delete;
 
-  [[nodiscard]] DurationUnit service();
+  [[nodiscard]] DurationUnit processEvents(std::chrono::milliseconds processingTime);
 
   void pushEvent(std::shared_ptr<Event> event);
   [[nodiscard]] std::shared_ptr<Event> pushEvent(std::shared_ptr<IController> controller,
@@ -63,27 +63,29 @@ class Scheduler {
   bool start();
 
   void wakeUp() {
-    std::lock_guard lock(m_CondMutex);
-    m_CondEvent.notify_one();
+    m_CondEvent.notify_all();
   }
 
   void terminate();
 
-  [[nodiscard]] DurationUnit getMaxIdleTimeout() const noexcept {
-    return m_MaxDelayIntervalMs;
+  [[nodiscard]] DurationUnit getMaxInterval() const {
+    return m_MaxInterval;
+  }
+  void setMaxInterval(const DurationUnit& maxInterval) {
+    m_MaxInterval = maxInterval;
   }
 
-  void setMaxIdleTimeout(DurationUnit maxIdleTimeout) {
-    m_MaxDelayIntervalMs = maxIdleTimeout;
+  [[nodiscard]] auto getEventsCount() const {
+    return m_scheduledEvents.size();
   }
 
  private:
-  std::mutex m_Mutex;                                      ///< Protects access to shared resources
-  std::mutex m_CondMutex;                                  ///< Guards condition variable synchronization
-  std::condition_variable m_CondEvent;                     ///< Notifies scheduler thread of events or termination
-  std::list<std::shared_ptr<Event>> m_scheduledEvents;     ///< Stores scheduled events
-  std::jthread m_Thread;                                   ///< Runs the event scheduler's service loop
-  DurationUnit m_MaxDelayIntervalMs{kMaxDelayIntervalMs};  ///< Max idle timeout interval
+  std::mutex m_Mutex;                                   ///< Protects access to shared resources
+  std::mutex m_CondMutex;                               ///< Guards condition variable synchronization
+  std::condition_variable m_CondEvent;                  ///< Notifies scheduler thread of events or termination
+  std::list<std::shared_ptr<Event>> m_scheduledEvents;  ///< Stores scheduled events
+  std::jthread m_Thread;                                ///< Runs the event scheduler's service loop
+  DurationUnit m_MaxInterval{kMaxDelayIntervalMs};      ///< Max interval for event processing
 };
 
 }  // end of namespace tev

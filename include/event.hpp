@@ -34,7 +34,7 @@ using namespace std::chrono_literals;
 /// - controller: a shared pointer to the controller object.
 /// - event: a shared pointer to the timed event object.
 /// Returns the duration of the next timed action.
-using ControllerEventCallback = std::function<DurationUnit(EventPtr event)>;
+using ControllerEventCallback = std::function<void(EventPtr event)>;
 
 /**
  * @brief Configuration structure for defining parameters of a timed event.

@@ -14,7 +14,7 @@ using namespace std::chrono_literals;
 class MyController : public IController {
  public:
   void handleEvent() {
-    std::cout << "Event handled.\n";
+    std::cout << "Hi from controller *** event served\n";
   }
   void stopEvent() {
     std::cout << "Event stopped.\n";
@@ -44,37 +44,107 @@ int main() {
   auto userData = std::make_shared<MyUserData>();
 
   // Configure event callbacks
-  EventConfig config{2000ms,  // delayMs
-                     1000ms,  // serveMs
-                     8000ms,  // lifeMs
-                     // startCallback
-                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
-                       std::cout << "*** Event started\n";
-                       return 1000ms;
-                     },
-                     // eventCallback
-                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
-                       std::cout << "*** Event running\n";
-                       return 1000ms;
-                     },
-                     // abortCallback
-                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
-                       std::cout << "*** Event aborted\n";
-                       return 0ms;
-                     },
-                     // completeCallback
-                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
-                       std::cout << "*** Event completed\n";
-                       return 0ms;
-                     },
-                     // timeoutCallback
-                     []([[maybe_unused]] EventPtr event) -> DurationUnit {
-                       std::cout << "*** Event timed out\n";
-                       return 0ms;
-                     }};
-
-  // Push event to scheduler
-  auto event = scheduler.pushEvent(controller, userData, config);
+  // Create an array of 5 EventConfig objects with staggered delays
+  EventConfig configs[5] = {
+      {0ms, 1100ms, 6666ms, /* start */
+       [](EventPtr e) {
+         std::cout << "Event 0 started. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       /* run */
+       [](EventPtr e) {
+         std::cout << "Event 0 running. Processing intervall " << e->getServeInterval().count() << " ms\n";
+         std::shared_ptr<MyController> myController = std::dynamic_pointer_cast<MyController>(e->getController());
+         if (myController) {
+           // successful cast, safe to use myController
+           myController->handleEvent();
+         } else {
+           // cast failed, handle error
+         }
+       },
+       /* abort */
+       [](EventPtr e) {
+         std::cout << "Event 0 aborted. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       /* complete */
+       [](EventPtr e) {
+         std::cout << "Event 0 completed. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       /* timeout */
+       [](EventPtr e) {
+         std::cout << "Event 0 timed out. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       }},
+      {200ms, 888ms, 7050ms,
+       [](EventPtr e) {
+         std::cout << "Event 1 started. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 1 running. Processing intervall " << e->getServeInterval().count() << " ms\n";
+         std::shared_ptr<MyController> myController = std::dynamic_pointer_cast<MyController>(e->getController());
+         if (myController) {
+           // successful cast, safe to use myController
+           myController->handleEvent();
+         } else {
+           // cast failed, handle error
+         }
+       },
+       [](EventPtr e) {
+         std::cout << "Event 1 aborted. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 1 completed. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 1 timed out. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       }},
+      {500ms, 1225ms, 7777ms,
+       [](EventPtr e) {
+         std::cout << "Event 2 started. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 2 running. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 2 aborted. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 2 completed. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 2 timed out. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       }},
+      {700ms, 912ms, 8765ms,
+       [](EventPtr e) {
+         std::cout << "Event 3 started. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 3 running. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 3 aborted. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 3 completed. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 3 timed out. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       }},
+      {100ms, 902ms, 9876ms,
+       [](EventPtr e) {
+         std::cout << "Event 4 started. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 4 running. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 4 aborted. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 4 completed. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       },
+       [](EventPtr e) {
+         std::cout << "Event 4 timed out. Processing intervall " << e->getServeInterval().count() << " ms\n";
+       }},
+  };
 
   // Start scheduler (usually runs in its own thread)
   if (!scheduler.start()) {
@@ -82,16 +152,17 @@ int main() {
     return 1;
   }
 
-  // Simulate servicing events for a while
-  for (int i = 0; i < 100; i++) {
-    auto timeout = 5000ms;
-    auto sooner = scheduler.service();
-    if (timeout > sooner) {
-      timeout = sooner;
-    }
-    std::cout << ">>> Next event in: " << timeout.count() << " ms\n";
-    std::this_thread::sleep_for(timeout);
+  // Push 5 events to the scheduler
+  for (int i = 0; i < 5; ++i) {
+    scheduler.pushEvent(controller, userData, configs[i]);
+    std::this_thread::sleep_for(1000ms);  // Stagger event creation
   }
+
+  while (scheduler.getEventsCount() > 0) {
+    // Process events
+  }
+
+  std::this_thread::sleep_for(3s);
 
   // Terminate scheduler after done
   scheduler.terminate();
