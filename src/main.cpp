@@ -16,12 +16,6 @@ class MyController : public IController {
   void handleEvent() {
     std::cout << "Hi from controller *** event served\n";
   }
-  void stopEvent() {
-    std::cout << "Event stopped.\n";
-  }
-  void abortEvent() {
-    std::cout << "Event aborted.\n";
-  }
 };
 
 // Custom user data implementing IUserData
@@ -154,7 +148,7 @@ int main() {
 
   // Push 5 events to the scheduler
   for (int i = 0; i < 5; ++i) {
-    scheduler.pushEvent(controller, userData, configs[i]);
+    auto e = scheduler.pushEvent(controller, userData, configs[i]);
     std::this_thread::sleep_for(1000ms);  // Stagger event creation
   }
 

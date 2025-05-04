@@ -32,7 +32,6 @@ target_include_directories(${TargetName} PRIVATE
    ${CMAKE_CURRENT_SOURCE_DIR}/../include
 )
 
-target_include_directories(${TargetName} PRIVATE ${CMAKE_SOURCE_DIR}/lib/include)
 target_link_libraries(${TargetName} PRIVATE Threads::Threads)
 
 # post build copy optional
