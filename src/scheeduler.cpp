@@ -72,12 +72,16 @@ void Scheduler::terminate() {
 void Scheduler::pushEvent(std::shared_ptr<Event> event) {
   const std::lock_guard lg(m_Mutex);
 
+  // set now
+  event->setLastProcTimePoint(std::chrono::steady_clock::now());
+  // set life clock
   if (event->getEventClock().Timeout<>() != std::chrono::milliseconds::min()) {
     event->getEventClock().Start();
   }
   if (event->getLifeClock().Timeout<>() != std::chrono::milliseconds::min()) {
     event->getLifeClock().Start();
   }
+  // set start delay
   if (event->getStartDelay() != std::chrono::milliseconds::min()) {
     event->setStatus(Event::Status::Pending);
   } else {
@@ -129,30 +133,35 @@ std::chrono::milliseconds Scheduler::processEvents(std::chrono::milliseconds pro
     if (it->getStartFunc()) {
       it->getStartFunc()(it);
     }
+    it->setLastProcTimePoint(std::chrono::steady_clock::now());
   };
   // invoke event function
   [[maybe_unused]] auto invokeEventFunction = [this](const std::shared_ptr<Event>& it) {
     if (it->getEventFunc()) {
       it->getEventFunc()(it);
     }
+    it->setLastProcTimePoint(std::chrono::steady_clock::now());
   };
   // invoke timeout function
   [[maybe_unused]] auto invokeTimeoutFunction = [this](const std::shared_ptr<Event>& it) {
     if (it->getTimeoutFunc()) {
       it->getTimeoutFunc()(it);
     }
+    it->setLastProcTimePoint(std::chrono::steady_clock::now());
   };
   // invoke complete function
   [[maybe_unused]] auto invokeCompleteFunction = [this](const std::shared_ptr<Event>& it) {
     if (it->getCompleteFunc()) {
       it->getCompleteFunc()(it);
     }
+    it->setLastProcTimePoint(std::chrono::steady_clock::now());
   };
   // invoke abort function
   [[maybe_unused]] auto invokeAbortFunction = [this](const std::shared_ptr<Event>& it) {
     if (it->getAbortFunc()) {
       it->getAbortFunc()(it);
     }
+    it->setLastProcTimePoint(std::chrono::steady_clock::now());
   };
 
   const std::lock_guard lg(m_Mutex);

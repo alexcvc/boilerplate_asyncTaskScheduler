@@ -182,21 +182,28 @@ class Event : public std::enable_shared_from_this<Event> {
   void setTimeoutFunc(const ControllerEventCallback& func) {
     m_TimeoutFunc = func;
   }
+  [[nodiscard]] const std::chrono::steady_clock::time_point& lastProcTimePoint() const {
+    return m_LastProcTimePoint;
+  }
+  void setLastProcTimePoint(const std::chrono::steady_clock::time_point& lastTp) {
+    m_LastProcTimePoint = lastTp;
+  }
 
  private:
-  std::shared_ptr<IController> m_Controller;              ///< Associated controller
-  std::shared_ptr<IUserData> m_UserData;                  ///< Encapsulated user-defined event data
-  Status m_Status{Status::Pending};                       ///< Status of the event
-  DurationUnit m_StartDelay{kDefaultDelayDuration};       ///< Optional delay before the event starts
-  DurationUnit m_ServeInterval{kDefaultIntervalMs};       ///< Interval for serving this event
-  DurationUnit m_MaxLifeDuration{kDefaultEndlessLifeMs};  ///< Maximum lifespan of the event
-  EventClock m_EventClock;                                ///< Clock object for timing the event
-  EventClock m_LifeClock;                                 ///< Clock object for lifetime tracking
-  ControllerEventCallback m_StartFunc{nullptr};           ///< Function pointer for handling start event execution
-  ControllerEventCallback m_EventFunc{nullptr};           ///< Function pointer for handling event execution
-  ControllerEventCallback m_AbortFunc{nullptr};           ///< Function pointer for stopping the event
-  ControllerEventCallback m_CompleteFunc{nullptr};        ///< Callback function executed on event completion
-  ControllerEventCallback m_TimeoutFunc{nullptr};         ///< Callback executed on timeout
+  std::shared_ptr<IController> m_Controller;                  ///< Associated controller
+  std::shared_ptr<IUserData> m_UserData;                      ///< Encapsulated user-defined event data
+  Status m_Status{Status::Pending};                           ///< Status of the event
+  DurationUnit m_StartDelay{kDefaultDelayDuration};           ///< Optional delay before the event starts
+  DurationUnit m_ServeInterval{kDefaultIntervalMs};           ///< Interval for serving this event
+  DurationUnit m_MaxLifeDuration{kDefaultEndlessLifeMs};      ///< Maximum lifespan of the event
+  EventClock m_EventClock;                                    ///< Clock object for timing the event
+  EventClock m_LifeClock;                                     ///< Clock object for lifetime tracking
+  ControllerEventCallback m_StartFunc{nullptr};               ///< Function pointer for handling start event execution
+  ControllerEventCallback m_EventFunc{nullptr};               ///< Function pointer for handling event execution
+  ControllerEventCallback m_AbortFunc{nullptr};               ///< Function pointer for stopping the event
+  ControllerEventCallback m_CompleteFunc{nullptr};            ///< Callback function executed on event completion
+  ControllerEventCallback m_TimeoutFunc{nullptr};             ///< Callback executed on timeout
+  std::chrono::steady_clock::time_point m_LastProcTimePoint;  ///< Last process point in time
 };
 
 }  // end of namespace tev

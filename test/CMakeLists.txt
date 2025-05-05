@@ -6,7 +6,7 @@ set(TargetName test_scheduler)
 enable_testing()
 
 # Add test target
-add_executable(${TargetName} test_1.cpp
+add_executable(${TargetName} testCases.cpp
    ${CMAKE_SOURCE_DIR}/include/iController.hpp
    ${CMAKE_SOURCE_DIR}/include/iUserData.hpp
    ${CMAKE_SOURCE_DIR}/include/event.hpp
