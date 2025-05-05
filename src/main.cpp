@@ -335,7 +335,7 @@ int main() {
   for (size_t i = 0; i < configs.size(); ++i) {
     std::cout << "Pushing event " << i << "\n";
     auto e = scheduler.pushEvent(controller, userData, configs[i]);
-    std::this_thread::sleep_for(500ms);  // Stagger event creation
+    std::this_thread::sleep_for(200ms);  // Stagger event creation
   }
 
   std::cout << "Waiting for events to be processed\n";
